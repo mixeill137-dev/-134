@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14532d">
+<title>მაღაზიის პროგრამა</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans Georgian",sans-serif;color:#17211b;background:#f3f6f4}
+*{box-sizing:border-box}body{margin:0}header{background:#14532d;color:white;padding:18px 16px 14px;position:sticky;top:0;z-index:5}
+h1{font-size:21px;margin:0 0 5px}header small{opacity:.85}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:14px}
+.tabs button{padding:10px 3px;font-size:12px;border:0;border-radius:9px;background:#2d6845;color:white}.tabs button.active{background:#fff;color:#14532d;font-weight:700}
+main{padding:14px;max-width:720px;margin:auto}.panel{display:none}.panel.active{display:block}.card{background:white;border:1px solid #e0e8e2;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px #132b1b08}
+h2{font-size:18px;margin:0 0 12px}label{display:block;font-size:13px;font-weight:650;margin:10px 0 5px}input,select{width:100%;padding:12px;border:1px solid #cbd5ce;border-radius:9px;background:#fff;font:inherit;font-size:16px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{border:0;border-radius:10px;padding:12px 14px;background:#166534;color:white;font-weight:700;font-size:15px;width:100%;margin-top:10px}.btn.secondary{background:#e5eee8;color:#14532d}.btn.danger{background:#b91c1c}.btn.small{width:auto;padding:8px 10px;margin:0;font-size:13px}
+.muted{color:#64736a;font-size:13px}.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#f0f7f1;border-radius:10px;padding:12px}.stat b{display:block;font-size:21px;margin-top:4px}
+.item{padding:12px 0;border-bottom:1px solid #e7ece8}.item:last-child{border:0}.itemtop{display:flex;justify-content:space-between;gap:10px;align-items:start}.itemname{font-weight:700}.pill{font-size:12px;background:#edf4ee;padding:4px 7px;border-radius:7px;white-space:nowrap}.price{font-weight:700}.empty{padding:18px;text-align:center;color:#6b756e}
+#video{width:100%;border-radius:10px;background:#101810;max-height:260px;object-fit:cover;display:none} .total{font-size:24px;font-weight:800}.cartline{display:grid;grid-template-columns:1fr 74px 76px;gap:7px;align-items:center;padding:8px 0;border-bottom:1px solid #eee}.cartline input{padding:8px}.hidden{display:none!important}
+footer{text-align:center;color:#748078;font-size:12px;padding:16px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏪 ჩემი მაღაზია</h1><small>საქონელი · გაყიდვები · საწყობის ნაშთები</small>
+  <nav class="tabs">
+    <button class="active" data-tab="home">მთავარი</button>
+    <button data-tab="receive">მიღება</button>
+    <button data-tab="sell">გაყიდვა</button>
+    <button data-tab="stock">საწყობი</button>
+  </nav>
+</header>
+<main>
+<section id="home" class="panel active">
+ <div class="card"><h2>დღევანდელი შეჯამება</h2><div class="statgrid">
+  <div class="stat">საქონლის სახეობა<b id="statKinds">0</b></div>
+  <div class="stat">საწყობის ერთეულები<b id="statUnits">0</b></div>
+  <div class="stat">დღის გაყიდვები<b id="statSales">0.00 ₾</b></div>
+  <div class="stat">დღის ტრანზაქციები<b id="statCount">0</b></div>
+ </div></div>
+ <div class="card"><h2>სწრაფი მოქმედებები</h2><button class="btn" onclick="showTab('sell')">＋ ახალი გაყიდვა</button><button class="btn secondary" onclick="showTab('receive')">＋ საქონლის მიღება</button><button class="btn secondary" onclick="exportBackup()">სარეზერვო ასლის ჩამოტვირთვა</button><label>სარეზერვო ასლის აღდგენა</label><input type="file" accept=".json,application/json" onchange="importBackup(event)"><p class="muted">მონაცემები ინახება ამ ტელეფონის ამ ბრაუზერში. პერიოდულად ჩამოტვირთე სარეზერვო ასლი.</p></div>
+ <div class="card"><h2>ბოლო გაყიდვები</h2><div id="recentSales"></div></div>
+</section>
+
+<section id="receive" class="panel">
+ <div class="card"><h2>საქონლის მიღება / დამატება</h2>
+ <label>შტრიხკოდი</label><div class="row"><input id="rBarcode" placeholder="შეიყვანე ან დაასკანერე"><button class="btn" style="margin:0" onclick="startScan('rBarcode')">📷 სკანირება</button></div>
+ <video id="video" playsinline></video><div id="scanMsg" class="muted"></div><button id="stopScan" class="btn danger hidden" onclick="stopScan()">სკანერის გაჩერება</button>
+ <label>საქონლის დასახელება</label><input id="rName" placeholder="მაგ. წყალი 1.5 ლ">
+ <div class="row"><div><label>შესყიდვის ფასი (₾)</label><input id="rCost" type="number" min="0" step=".01" placeholder="0.00"></div><div><label>გასაყიდი ფასი (₾)</label><input id="rPrice" type="number" min="0" step=".01" placeholder="0.00"></div></div>
+ <div class="row"><div><label>რაოდენობა</label><input id="rQty" type="number" min="0.001" step="1" value="1"></div><div><label>ერთეული</label><select id="rUnit"><option>ცალი</option><option>კგ</option><option>ლიტრი</option><option>მეტრი</option><option>შეკვრა</option></select></div></div>
+ <button class="btn" onclick="receiveStock()">შენახვა / ნაშთის გაზრდა</button><p class="muted">არსებული შტრიხკოდის შეყვანისას რაოდენობა დაემატება იმავე საქონელს.</p>
+ </div>
+</section>
+
+<section id="sell" class="panel">
+ <div class="card"><h2>გაყიდვა</h2>
+ <label>შტრიხკოდი</label><div class="row"><input id="sBarcode" placeholder="შეიყვანე ან დაასკანერე" onkeydown="if(event.key==='Enter')addToCart()"><button class="btn" style="margin:0" onclick="startScan('sBarcode')">📷 სკანირება</button></div>
+ <button class="btn secondary" onclick="addToCart()">საქონლის დამატება კალათაში</button>
+ <div id="cart"></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><span>სულ გადასახდელი</span><span class="total" id="cartTotal">0.00 ₾</span></div>
+ <label>გადახდის მეთოდი</label><select id="payment" onchange="paymentChanged()"><option value="cash">ნაღდი ფული</option><option value="card">ბარათი</option><option value="mixed">ნაღდი + ბარათი</option></select>
+ <div id="cashFields"><label>მიღებული ნაღდი თანხა (₾)</label><input id="cashGiven" type="number" min="0" step=".01" placeholder="მაგ. 20.00" oninput="updateChange()"><div class="muted" id="changeText">ხურდა: 0.00 ₾</div></div>
+ <div id="mixedFields" class="hidden"><label>ნაღდი თანხა (₾)</label><input id="mixedCash" type="number" min="0" step=".01" value="0" oninput="updateChange()"><label>ბარათით გადახდა (₾)</label><input id="mixedCard" type="number" min="0" step=".01" value="0" oninput="updateChange()"><div class="muted" id="mixedText"></div></div>
+ <button class="btn" onclick="completeSale()">გაყიდვის დადასტურება</button>
+ </div>
+</section>
+
+<section id="stock" class="panel">
+ <div class="card"><h2>საწყობი და ნაშთები</h2><input id="stockSearch" placeholder="ძებნა დასახელებით ან შტრიხკოდით" oninput="renderStock()"><div id="stockList"></div></div>
+ <div class="card"><h2>ანგარიშები</h2><div class="row"><div><label>თარიღიდან</label><input id="fromDate" type="date" onchange="renderReports()"></div><div><label>თარიღამდე</label><input id="toDate" type="date" onchange="renderReports()"></div></div><div id="reports"></div><button class="btn secondary" onclick="exportSales()">გაყიდვების CSV ჩამოტვირთვა</button></div>
+</section>
+<footer>მონაცემები მხოლოდ ამ ბრაუზერში ინახება · ეს არის საწყისი საცდელი ვერსია</footer>
+</main>
+<script>
+const KEY='shop_app_ka_v1';
+let db={products:[],sales:[],movements:[]},cart=[],scanStream=null,scanTimer=null,scanTarget=null;
+function load(){try{const x=localStorage.getItem(KEY);if(x)db=JSON.parse(x)}catch(e){alert('მონაცემების წაკითხვა ვერ მოხერხდა')}}function save(){localStorage.setItem(KEY,JSON.stringify(db));renderAll()}
+const money=n=>(Number(n)||0).toLocaleString('ka-GE',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₾';
+const num=id=>Number(document.getElementById(id).value)||0;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function showTab(id){stopScan();document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));renderAll()}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+function productByBarcode(b){return db.products.find(p=>p.barcode===String(b).trim())}
+function receiveStock(){let barcode=document.getElementById('rBarcode').value.trim(),name=document.getElementById('rName').value.trim(),cost=num('rCost'),price=num('rPrice'),qty=num('rQty'),unit=document.getElementById('rUnit').value;
+ if(!barcode||!name||qty<=0||cost<0||price<0){alert('შეავსე შტრიხკოდი, დასახელება, ფასები და სწორი რაოდენობა.');return}
+ let p=productByBarcode(barcode);if(p){p.qty=Number(p.qty)+qty;p.name=name||p.name;p.cost=cost;p.price=price;p.unit=unit}else{db.products.push({id:Date.now()+Math.random(),barcode,name,cost,price,qty,unit})}
+ db.movements.push({date:new Date().toISOString(),type:'მიღება',barcode,name,qty});save();alert('საქონელი შენახულია');document.getElementById('rBarcode').value='';document.getElementById('rName').value='';document.getElementById('rCost').value='';document.getElementById('rPrice').value='';document.getElementById('rQty').value='1';}
+function addToCart(){let b=document.getElementById('sBarcode').value.trim();if(!b){alert('შეიყვანე ან დაასკანერე შტრიხკოდი');return}let p=productByBarcode(b);if(!p){if(confirm('ეს შტრიხკოდი საწყობში არ არის. გსურს საქონლის მიღების გვერდზე გადასვლა?')){document.getElementById('rBarcode').value=b;showTab('receive')}return}
+ let line=cart.find(x=>x.id===p.id);if(line){if(line.qty+1>p.qty){alert('საწყობში საკმარისი რაოდენობა არ არის');return}line.qty++}else{if(p.qty<1){alert('საქონელი ნაშთში არ არის');return}cart.push({id:p.id,qty:1})}
+ document.getElementById('sBarcode').value='';renderCart()}
+function renderCart(){const el=document.getElementById('cart');if(!cart.length){el.innerHTML='<div class="empty">კალათა ცარიელია</div>'}else el.innerHTML=cart.map((l,i)=>{let p=db.products.find(p=>p.id===l.id);return `<div class="cartline"><div><b>${esc(p?.name)}</b><div class="muted">${money(p?.price)} / ${esc(p?.unit)}</div></div><input aria-label="რაოდენობა" type="number" min=".001" step="1" value="${l.qty}" onchange="setCartQty(${i},this.value)"><button class="btn danger small" onclick="removeCart(${i})">წაშლა</button></div>`}).join('');
+ document.getElementById('cartTotal').textContent=money(cart.reduce((s,l)=>s+(db.products.find(p=>p.id===l.id)?.price||0)*l.qty,0));updateChange()}
+function setCartQty(i,v){let q=Number(v),p=db.products.find(p=>p.id===cart[i].id);if(!q||q<0||q>p.qty){alert('რაოდენობა არასწორია ან საწყობში საკმარისი ნაშთი არ არის');renderCart();return}cart[i].qty=q;renderCart()}function removeCart(i){cart.splice(i,1);renderCart()}
+function paymentChanged(){let v=document.getElementById('payment').value;document.getElementById('cashFields').classList.toggle('hidden',v==='card'||v==='mixed');document.getElementById('mixedFields').classList.toggle('hidden',v!=='mixed');updateChange()}
+function updateChange(){let total=cart.reduce((s,l)=>s+(db.products.find(p=>p.id===l.id)?.price||0)*l.qty,0),method=document.getElementById('payment').value;let ch=document.getElementById('changeText');if(ch)ch.textContent='ხურდა: '+money(Math.max(0,num('cashGiven')-total));let mt=document.getElementById('mixedText');if(mt)mt.textContent='გადასახდელი: '+money(total)+' · სხვაობა: '+money(num('mixedCash')+num('mixedCard')-total)}
+function completeSale(){if(!cart.length){alert('კალათა ცარიელია');return}let total=cart.reduce((s,l)=>s+(db.products.find(p=>p.id===l.id)?.price||0)*l.qty,0),method=document.getElementById('payment').value,cash=0,card=0,change=0;
+ if(method==='cash'){cash=num('cashGiven');if(cash<total){alert('მიღებული თანხა ჯამზე ნაკლებია');return}change=cash-total}
+ else if(method==='card')card=total;
+ else{cash=num('mixedCash');card=num('mixedCard');if(Math.round((cash+card-total)*100)!==0){alert('ნაღდი და ბარათით გადახდილი თანხების ჯამი უნდა უდრიდეს გადასახდელს');return}}
+ const items=cart.map(l=>{let p=db.products.find(p=>p.id===l.id);return {barcode:p.barcode,name:p.name,qty:l.qty,price:p.price,cost:p.cost,unit:p.unit}});
+ items.forEach(l=>{let p=productByBarcode(l.barcode);p.qty=Number((p.qty-l.qty).toFixed(3));db.movements.push({date:new Date().toISOString(),type:'გაყიდვა',barcode:l.barcode,name:l.name,qty:-l.qty})});
+ db.sales.push({id:Date.now(),date:new Date().toISOString(),items,total,cash,card,change,method});cart=[];document.getElementById('cashGiven').value='';document.getElementById('mixedCash').value='0';document.getElementById('mixedCard').value='0';save();renderCart();alert('გაყიდვა შენახულია. ხურდა: '+money(change));}
+function renderStock(){let q=(document.getElementById('stockSearch')?.value||'').toLowerCase(),items=db.products.filter(p=>(p.name+' '+p.barcode).toLowerCase().includes(q));document.getElementById('stockList').innerHTML=items.length?items.map(p=>`<div class="item"><div class="itemtop"><div><div class="itemname">${esc(p.name)}</div><div class="muted">შტრიხკოდი: ${esc(p.barcode)} · ${esc(p.unit)}</div></div><span class="pill">${p.qty} ${esc(p.unit)}</span></div><div style="display:flex;justify-content:space-between;margin-top:8px"><span class="muted">შესყიდვა: ${money(p.cost)}</span><span class="price">გაყიდვა: ${money(p.price)}</span></div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn secondary small" onclick="editProduct('${encodeURIComponent(p.barcode)}')">რედაქტირება</button><button class="btn danger small" onclick="deleteProduct('${encodeURIComponent(p.barcode)}')">წაშლა</button></div></div>`).join(''):'<div class="empty">საქონელი ჯერ არ არის დამატებული</div>'}
+function editProduct(encoded){let b=decodeURIComponent(encoded),p=productByBarcode(b);if(!p)return;let name=prompt('დასახელება:',p.name);if(name===null)return;let price=prompt('გასაყიდი ფასი:',p.price);if(price===null)return;let cost=prompt('შესყიდვის ფასი:',p.cost);if(cost===null)return;if(!name.trim()||Number(price)<0||Number(cost)<0){alert('მონაცემები არასწორია');return}p.name=name.trim();p.price=Number(price);p.cost=Number(cost);save()}
+function deleteProduct(encoded){let p=productByBarcode(decodeURIComponent(encoded));if(p&&confirm('წავშალოთ "'+p.name+'"? გაყიდვების ისტორია დარჩება.')){db.products=db.products.filter(x=>x.id!==p.id);save()}}
+function renderReports(){let from=document.getElementById('fromDate')?.value,to=document.getElementById('toDate')?.value;let sales=db.sales.filter(s=>{let d=s.date.slice(0,10);return(!from||d>=from)&&(!to||d<=to)});let total=sales.reduce((a,s)=>a+s.total,0),cash=sales.reduce((a,s)=>a+s.cash,0),card=sales.reduce((a,s)=>a+s.card,0),cost=sales.reduce((a,s)=>a+s.items.reduce((n,i)=>n+i.cost*i.qty,0),0);document.getElementById('reports').innerHTML=`<div class="statgrid" style="margin-top:12px"><div class="stat">გაყიდვები<b>${money(total)}</b></div><div class="stat">სავარაუდო მოგება<b>${money(total-cost)}</b></div><div class="stat">ნაღდი<b>${money(cash)}</b></div><div class="stat">ბარათი<b>${money(card)}</b></div></div><p class="muted">მოგება ითვლება შენახული შესყიდვის ფასებით; ხარჯები და გადასახადები გათვალისწინებული არ არის.</p>`}
+function renderHome(){document.getElementById('statKinds').textContent=db.products.length;document.getElementById('statUnits').textContent=db.products.reduce((s,p)=>s+Number(p.qty),0).toLocaleString('ka-GE');let today=new Date().toISOString().slice(0,10),sales=db.sales.filter(s=>s.date.slice(0,10)===today);document.getElementById('statSales').textContent=money(sales.reduce((s,x)=>s+x.total,0));document.getElementById('statCount').textContent=sales.length;let recent=db.sales.slice(-5).reverse();document.getElementById('recentSales').innerHTML=recent.length?recent.map(s=>`<div class="item"><div class="itemtop"><span>${new Date(s.date).toLocaleString('ka-GE')}</span><b>${money(s.total)}</b></div><div class="muted">${s.method==='cash'?'ნაღდი':s.method==='card'?'ბარათი':'შერეული'} · ${s.items.length} სახეობა</div></div>`).join(''):'<div class="empty">გაყიდვები ჯერ არ არის</div>'}
+function renderAll(){renderHome();renderStock();renderReports();renderCart()}
+async function startScan(target){stopScan();scanTarget=target;let video=document.getElementById('video'),msg=document.getElementById('scanMsg');if(!('BarcodeDetector'in window)){msg.textContent='ამ ბრაუზერში კამერით სკანირება არ არის მხარდაჭერილი. შეიყვანე შტრიხკოდი ხელით ან სცადე Chrome-ის განახლება.';return}try{let detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']});scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});video.srcObject=scanStream;video.style.display='block';await video.play();document.getElementById('stopScan').classList.remove('hidden');msg.textContent='მოათავსე შტრიხკოდი კამერის წინ…';const tick=async()=>{if(!scanStream)return;try{let codes=await detector.detect(video);if(codes.length){document.getElementById(scanTarget).value=codes[0].rawValue;stopScan();msg.textContent='შტრიხკოდი წაკითხულია: '+codes[0].rawValue;if(scanTarget==='sBarcode')addToCart();return}}catch(e){}scanTimer=setTimeout(tick,250)};tick()}catch(e){msg.textContent='კამერაზე წვდომა ვერ მოხერხდა. მიეცი ბრაუზერს კამერის ნებართვა და გახსენი პროგრამა HTTPS მისამართიდან.';stopScan()}}
+function stopScan(){if(scanTimer)clearTimeout(scanTimer);scanTimer=null;if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null}let v=document.getElementById('video');if(v){v.pause();v.srcObject=null;v.style.display='none'}let b=document.getElementById('stopScan');if(b)b.classList.add('hidden')}
+function exportBackup(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='magaziis-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href)}
+function importBackup(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!Array.isArray(x.products)||!Array.isArray(x.sales))throw 0;if(confirm('არსებული მონაცემები ჩანაცვლდეს ამ სარეზერვო ასლით?')){db={products:x.products,sales:x.sales||[],movements:x.movements||[]};save();alert('ასლი აღდგენილია')}}catch(err){alert('ფაილი არასწორია')}};r.readAsText(f);e.target.value=''}
+function exportSales(){let rows=[['თარიღი','საქონელი','შტრიხკოდი','რაოდენობა','ფასი','ჯამი','გადახდა']];db.sales.forEach(s=>s.items.forEach(i=>rows.push([s.date,i.name,i.barcode,i.qty,i.price,(i.qty*i.price).toFixed(2),s.method])));let csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gayidvebi.csv';a.click();URL.revokeObjectURL(a.href)}
+load();renderAll();paymentChanged();
+</script>
+</body></html>
